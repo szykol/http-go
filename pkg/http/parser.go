@@ -56,7 +56,10 @@ func parseRequest(rd io.Reader) (Request, error) {
 
 	scanner := bufio.NewScanner(rd)
 
-	scanner.Scan()
+	if ok := scanner.Scan(); !ok {
+		return parsedRequest, fmt.Errorf("error scanning startline: %w", scanner.Err())
+	}
+
 	startLine, err := parseStartLine(scanner.Bytes())
 	if err != nil {
 		return parsedRequest, fmt.Errorf("error parsing start line: %w", err)
@@ -86,14 +89,20 @@ func parseRequest(rd io.Reader) (Request, error) {
 		headers[key] = value
 	}
 
-	scanner.Scan()
-	payload := scanner.Bytes()
+	contentLength := getContentLength(headers)
+	if contentLength > 0 {
+		if ok := scanner.Scan(); !ok {
+			return parsedRequest, fmt.Errorf("error scanning content: %w", scanner.Err())
+		}
+	}
+
+	payload := bytes.TrimSpace(scanner.Bytes())
 
 	parsedRequest.Method = startLine.method
 	parsedRequest.Proto = startLine.proto
-	parsedRequest.ContentLength = getContentLength(headers)
 	parsedRequest.Headers = headers
-	parsedRequest.Payload = bytes.TrimSpace(payload)
+	parsedRequest.Payload = payload
+	parsedRequest.ContentLength = contentLength
 
 	return parsedRequest, nil
 }
