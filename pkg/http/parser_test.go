@@ -17,15 +17,17 @@ func TestParser(t *testing.T) {
 	request, err := parseRequest(reader)
 
 	expectedRequest := Request{
-		StartLine: "POST / HTTP/1.1",
-		headers: map[string]string{
+		Method:        "POST",
+		Proto:         "HTTP/1.1",
+		ContentLength: 16,
+		Headers: map[string]string{
 			"host":           "localhost:4221",
 			"user-agent":     "curl/8.4.0",
 			"accept":         "*/*",
 			"content-length": "16",
 			"content-type":   "application/json",
 		},
-		payload: []byte("{\"test\":\"value\"}"),
+		Payload: []byte("{\"test\":\"value\"}"),
 	}
 
 	assert.Nil(t, err)
