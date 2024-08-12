@@ -61,11 +61,16 @@ func (s *Server) handleNewConnection(ctx context.Context, conn net.Conn) {
 	logger := log.FromContext(ctx)
 	logger.Debug("Handling new connection")
 
+	defer conn.Close()
+
 	reader := bufio.NewReader(conn)
 	line, err := reader.ReadBytes('\n')
 	if err != nil {
 		logger.Errorw("Error reading from remote", "error", err)
 	}
 
-	conn.Write(line)
+	_, err = conn.Write(line)
+	if err != nil {
+		logger.Errorw("Error writing to remote", "error", err)
+	}
 }
