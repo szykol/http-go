@@ -15,6 +15,8 @@ type Request struct {
 
 	Headers map[string]string
 	Payload []byte
+
+	path string
 }
 
 type startLine struct {
@@ -95,7 +97,6 @@ func parseRequest(rd io.Reader) (Request, error) {
 			return parsedRequest, fmt.Errorf("error scanning content: %w", scanner.Err())
 		}
 	}
-
 	payload := bytes.TrimSpace(scanner.Bytes())
 
 	parsedRequest.Method = startLine.method
@@ -103,6 +104,7 @@ func parseRequest(rd io.Reader) (Request, error) {
 	parsedRequest.Headers = headers
 	parsedRequest.Payload = payload
 	parsedRequest.ContentLength = contentLength
+	parsedRequest.path = startLine.path
 
 	return parsedRequest, nil
 }

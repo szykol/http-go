@@ -1,17 +1,20 @@
 package http
 
 import (
-	"bufio"
 	"context"
 	"net"
 
 	"github.com/szykol/http/pkg/http/log"
 )
 
-type Server struct{}
+type Server struct {
+	handlers map[handlerIdentifier]RequestHandler
+}
 
 func NewServer() *Server {
-	return &Server{}
+	return &Server{
+		handlers: make(map[handlerIdentifier]RequestHandler),
+	}
 }
 
 func (s *Server) Run(ctx context.Context, listenAddr string) {
@@ -36,6 +39,19 @@ func (s *Server) Run(ctx context.Context, listenAddr string) {
 			return
 		}
 	}
+}
+
+func (s *Server) AddHandler(method, path string, requestHandler RequestHandler) {
+	ident := handlerIdentifier{
+		method: method,
+		path:   path,
+	}
+
+	if _, ok := s.getHandler(ident); ok {
+		panic("Handler for this method and path already registered")
+	}
+
+	s.handlers[ident] = requestHandler
 }
 
 func listener(ctx context.Context, listenAddr string, connChan chan<- net.Conn) {
@@ -63,14 +79,31 @@ func (s *Server) handleNewConnection(ctx context.Context, conn net.Conn) {
 
 	defer conn.Close()
 
-	reader := bufio.NewReader(conn)
-	line, err := reader.ReadBytes('\n')
+	request, err := parseRequest(conn)
 	if err != nil {
-		logger.Errorw("Error reading from remote", "error", err)
+		logger.Errorw("Error parsing request", "request", request, "err", err)
+		return
 	}
 
-	_, err = conn.Write(line)
-	if err != nil {
-		logger.Errorw("Error writing to remote", "error", err)
+	ident := handlerIdentifier{
+		path:   request.path,
+		method: request.Method,
 	}
+
+	handler, ok := s.getHandler(ident)
+	if !ok {
+		logger.Errorw("Could not get handler for request", "request", request.path, "err", err)
+		return
+	}
+
+	requestWriter := newResponseWriter(conn)
+
+	handler(requestWriter, &request)
+}
+
+func (s *Server) getHandler(handlerIdentifier handlerIdentifier) (RequestHandler, bool) {
+	// NOTE: assuming this will get more complicated over time
+
+	handler, ok := s.handlers[handlerIdentifier]
+	return handler, ok
 }
