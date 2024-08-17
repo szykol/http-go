@@ -97,17 +97,19 @@ func (s *Server) handleNewConnection(ctx context.Context, conn net.Conn) {
 
 	requestWriter := newResponseWriter(conn)
 
-	handle(handler, requestWriter, &request)
+	handle(ctx, handler, requestWriter, &request)
 }
 
-func handle(handler RequestHandler, w ResponseWriter, req *Request) {
+func handle(ctx context.Context, h RequestHandler, w ResponseWriter, req *Request) {
 	defer func() {
 		if r := recover(); r != nil {
+			logger := log.FromContext(ctx)
+			logger.Errorw("Error when handling request")
 			InternalServerErrorHandler(w, req)
 		}
 	}()
 
-	handler(w, req)
+	h(w, req)
 }
 
 func (s *Server) getHandler(handlerIdentifier handlerIdentifier) (RequestHandler, bool) {
