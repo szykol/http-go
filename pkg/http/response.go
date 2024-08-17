@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"fmt"
 	"io"
-	"net"
 	"strconv"
 
 	"go.uber.org/zap/buffer"
@@ -17,16 +16,16 @@ type ResponseWriter interface {
 }
 
 type responseWriter struct {
-	conn       net.Conn
+	writer     io.Writer
 	headers    map[string]string
 	statusCode int
 
 	buffer *bytes.Buffer
 }
 
-func newResponseWriter(conn net.Conn) *responseWriter {
+func newResponseWriter(w io.Writer) *responseWriter {
 	return &responseWriter{
-		conn:    conn,
+		writer:  w,
 		headers: make(map[string]string),
 		buffer:  &bytes.Buffer{},
 	}
@@ -48,7 +47,7 @@ func (w *responseWriter) Write(message []byte) (int, error) {
 	w.write([]byte("\r\n"))
 	w.write(message)
 
-	return w.conn.Write(w.buffer.Bytes())
+	return w.writer.Write(w.buffer.Bytes())
 }
 
 func (w *responseWriter) setHeader(key string, value string) {
@@ -84,7 +83,7 @@ func (w *responseWriter) SetStatus(statusCode int) error {
 	_, _ = buf.WriteString(getStatus(statusCode))
 	_, _ = buf.Write([]byte("\r\n"))
 
-	_, err := w.conn.Write(buf.Bytes())
+	_, err := w.writer.Write(buf.Bytes())
 	return err
 }
 

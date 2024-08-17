@@ -2,6 +2,7 @@ package http
 
 import (
 	"context"
+	"io"
 	"net"
 
 	"github.com/szykol/http/pkg/log"
@@ -73,18 +74,22 @@ func listener(ctx context.Context, listenAddr string, connChan chan<- net.Conn) 
 	}
 }
 
-func (s *Server) handleNewConnection(ctx context.Context, conn net.Conn) {
+func (s *Server) handleNewConnection(ctx context.Context, rd io.ReadWriteCloser) {
+	defer rd.Close()
+
 	logger := log.FromContext(ctx)
 	logger.Debug("Handling new connection")
 
-	defer conn.Close()
-
-	request, err := parseRequest(conn)
+	request, err := parseRequest(rd)
 	if err != nil {
 		logger.Errorw("Error parsing request", "request", request, "err", err)
 		return
 	}
 
+	s.handleRequest(ctx, &request, rd)
+}
+
+func (s *Server) handleRequest(ctx context.Context, request *Request, rd io.ReadWriter) {
 	ident := handlerIdentifier{
 		path:   request.path,
 		method: request.Method,
@@ -95,9 +100,9 @@ func (s *Server) handleNewConnection(ctx context.Context, conn net.Conn) {
 		handler = NotFoundHandler
 	}
 
-	requestWriter := newResponseWriter(conn)
+	requestWriter := newResponseWriter(rd)
 
-	handle(ctx, handler, requestWriter, &request)
+	handle(ctx, handler, requestWriter, request)
 }
 
 func handle(ctx context.Context, h RequestHandler, w ResponseWriter, req *Request) {
