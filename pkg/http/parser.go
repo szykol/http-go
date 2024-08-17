@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"strconv"
+	"strings"
 )
 
 type Request struct {
@@ -33,9 +34,9 @@ func parseStartLine(line []byte) (startLine, error) {
 		return startLine, fmt.Errorf("invalid length of values in http start line")
 	}
 
-	startLine.method = string(splitted[0])
-	startLine.path = string(splitted[1])
-	startLine.proto = string(splitted[2])
+	startLine.method = strings.TrimSpace(string(splitted[0]))
+	startLine.path = strings.TrimSpace(string(splitted[1]))
+	startLine.proto = strings.TrimSpace(string(splitted[2]))
 
 	return startLine, nil
 }
@@ -105,7 +106,7 @@ func parseRequest(rd io.Reader) (Request, error) {
 		buf := make([]byte, contentLength)
 		n, err := reader.Read(buf)
 		if err != nil {
-			return parsedRequest, fmt.Errorf("error parsing content")
+			return parsedRequest, fmt.Errorf("error parsing content: %w", err)
 		}
 
 		payload = buf[:n]

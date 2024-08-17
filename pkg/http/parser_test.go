@@ -8,7 +8,7 @@ import (
 )
 
 func TestParser_POST_WithContent(t *testing.T) {
-	requestInput := "POST / HTTP/1.1\r\n Host: localhost:4221\r\n User-Agent: curl/8.4.0\r\n Accept: */*\r\nContent-Length: 16\r\n Content-Type: application/json\r\n \r\n {\"test\":\"value\"}"
+	requestInput := "POST / HTTP/1.1\r\n Host: localhost:4221\r\n User-Agent: curl/8.4.0\r\n Accept: */*\r\nContent-Length: 16\r\n Content-Type: application/json\r\n\r\n{\"test\":\"value\"}"
 
 	reader := strings.NewReader(requestInput)
 
@@ -26,6 +26,7 @@ func TestParser_POST_WithContent(t *testing.T) {
 			"content-type":   "application/json",
 		},
 		Payload: []byte("{\"test\":\"value\"}"),
+		path:    "/",
 	}
 
 	assert.Nil(t, err)
@@ -53,6 +54,7 @@ func TestParser_NoHeaders(t *testing.T) {
 		Method:  "GET",
 		Proto:   "HTTP/1.1",
 		Headers: map[string]string{},
+		path:    "/",
 	}
 
 	assert.Nil(t, err)
@@ -66,5 +68,5 @@ func TestParser_NoContent(t *testing.T) {
 
 	_, err := parseRequest(reader)
 
-	assert.ErrorContains(t, err, "error scanning content:")
+	assert.ErrorContains(t, err, "error parsing content:")
 }

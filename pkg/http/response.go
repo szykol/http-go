@@ -34,7 +34,9 @@ func newResponseWriter(conn net.Conn) *responseWriter {
 
 func (w *responseWriter) Write(message []byte) (int, error) {
 	if w.statusCode == 0 {
-		w.SetStatus(200)
+		if err := w.SetStatus(200); err != nil {
+			return 0, fmt.Errorf("could not set status: %w", err)
+		}
 	}
 
 	contentLength := len(message)
@@ -49,43 +51,38 @@ func (w *responseWriter) Write(message []byte) (int, error) {
 	return w.conn.Write(w.buffer.Bytes())
 }
 
-func (w *responseWriter) setHeader(key string, value string) (int, error) {
+func (w *responseWriter) setHeader(key string, value string) {
 	buf := bytes.Buffer{}
-	buf.WriteString(key)
-	buf.Write([]byte(": "))
-	buf.WriteString(value)
-	buf.Write([]byte("\r\n"))
+	_, _ = buf.WriteString(key)
+	_, _ = buf.Write([]byte(": "))
+	_, _ = buf.WriteString(value)
+	_, _ = buf.Write([]byte("\r\n"))
 
-	return w.write(buf.Bytes())
+	w.write(buf.Bytes())
 }
 
-func (w *responseWriter) setContentType(contentType string) (int, error) {
-	return w.setHeader("Content-Type", contentType)
+func (w *responseWriter) setContentType(contentType string) {
+	w.setHeader("Content-Type", contentType)
 }
 
-func (w *responseWriter) setContentLength(length int) (int, error) {
-	return w.setHeader("Content-Length", strconv.Itoa(length))
+func (w *responseWriter) setContentLength(length int) {
+	w.setHeader("Content-Length", strconv.Itoa(length))
 }
 
-func (w *responseWriter) write(message []byte) (int, error) {
-	n, err := w.buffer.Write(message)
-	if err != nil {
-		return n, fmt.Errorf("Could not write response: %w", err)
-	}
-
-	return n, nil
+func (w *responseWriter) write(message []byte) {
+	_, _ = w.buffer.Write(message)
 }
 
 func (w *responseWriter) SetStatus(statusCode int) error {
 	w.statusCode = statusCode
 
 	buf := buffer.Buffer{}
-	buf.Write([]byte("HTTP/1.1 "))
+	_, _ = buf.Write([]byte("HTTP/1.1 "))
 
-	buf.WriteString(strconv.Itoa(statusCode))
-	buf.WriteByte(' ')
-	buf.WriteString(getStatus(statusCode))
-	buf.Write([]byte("\r\n"))
+	_, _ = buf.WriteString(strconv.Itoa(statusCode))
+	_ = buf.WriteByte(' ')
+	_, _ = buf.WriteString(getStatus(statusCode))
+	_, _ = buf.Write([]byte("\r\n"))
 
 	_, err := w.conn.Write(buf.Bytes())
 	return err
