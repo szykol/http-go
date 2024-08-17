@@ -4,7 +4,7 @@ import (
 	"context"
 	"net"
 
-	"github.com/szykol/http/pkg/http/log"
+	"github.com/szykol/http/pkg/log"
 )
 
 type Server struct {

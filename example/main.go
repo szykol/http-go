@@ -4,7 +4,7 @@ import (
 	"context"
 
 	"github.com/szykol/http/pkg/http"
-	"github.com/szykol/http/pkg/http/log"
+	"github.com/szykol/http/pkg/log"
 )
 
 func main() {
