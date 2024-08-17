@@ -3,6 +3,7 @@ package http
 import (
 	"bufio"
 	"bytes"
+	"errors"
 	"fmt"
 	"io"
 	"strconv"
@@ -56,21 +57,28 @@ func getContentLength(headers map[string]string) int {
 func parseRequest(rd io.Reader) (Request, error) {
 	var parsedRequest Request
 
-	scanner := bufio.NewScanner(rd)
+	reader := bufio.NewReader(rd)
 
-	if ok := scanner.Scan(); !ok {
-		return parsedRequest, fmt.Errorf("error scanning startline: %w", scanner.Err())
+	startLineStr, err := reader.ReadBytes('\n')
+	if err != nil {
+		return parsedRequest, fmt.Errorf("error scanning startline: %w", err)
 	}
 
-	startLine, err := parseStartLine(scanner.Bytes())
+	startLine, err := parseStartLine(startLineStr)
 	if err != nil {
 		return parsedRequest, fmt.Errorf("error parsing start line: %w", err)
 	}
 
 	headers := make(map[string]string)
 
-	for scanner.Scan() {
-		line := scanner.Bytes()
+	for {
+		line, err := reader.ReadBytes('\n')
+		switch {
+		case errors.Is(err, io.EOF):
+			break
+		case err != nil:
+			return parsedRequest, fmt.Errorf("error parsing request: %w", err)
+		}
 		line = bytes.TrimSpace(line)
 
 		if len(line) == 0 {
@@ -92,12 +100,16 @@ func parseRequest(rd io.Reader) (Request, error) {
 	}
 
 	contentLength := getContentLength(headers)
+	var payload []byte
 	if contentLength > 0 {
-		if ok := scanner.Scan(); !ok {
-			return parsedRequest, fmt.Errorf("error scanning content: %w", scanner.Err())
+		buf := make([]byte, contentLength)
+		n, err := reader.Read(buf)
+		if err != nil {
+			return parsedRequest, fmt.Errorf("error parsing content")
 		}
+
+		payload = buf[:n]
 	}
-	payload := bytes.TrimSpace(scanner.Bytes())
 
 	parsedRequest.Method = startLine.method
 	parsedRequest.Proto = startLine.proto
