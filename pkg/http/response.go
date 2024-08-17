@@ -110,6 +110,8 @@ func getStatus(statusCode int) string {
 		return "Conflict"
 	case 418:
 		return "I'm a teapot"
+	case 500:
+		return "Internal Server Error"
 	default:
 		return "UNKNOWN"
 	}

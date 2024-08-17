@@ -92,13 +92,22 @@ func (s *Server) handleNewConnection(ctx context.Context, conn net.Conn) {
 
 	handler, ok := s.getHandler(ident)
 	if !ok {
-		logger.Errorw("Could not get handler for request", "request", request.path, "err", err)
-		return
+		handler = NotFoundHandler
 	}
 
 	requestWriter := newResponseWriter(conn)
 
-	handler(requestWriter, &request)
+	handle(handler, requestWriter, &request)
+}
+
+func handle(handler RequestHandler, w ResponseWriter, req *Request) {
+	defer func() {
+		if r := recover(); r != nil {
+			InternalServerErrorHandler(w, req)
+		}
+	}()
+
+	handler(w, req)
 }
 
 func (s *Server) getHandler(handlerIdentifier handlerIdentifier) (RequestHandler, bool) {
