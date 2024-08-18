@@ -18,14 +18,14 @@ func NewServer() *Server {
 	}
 }
 
-func (s *Server) Run(ctx context.Context, listenAddr string) {
+func (s *Server) Run(ctx context.Context, l net.Listener) {
 	logger := log.FromContext(ctx)
 
-	logger.Debugw("Starting Server on", "listenAddr", listenAddr)
+	logger.Debugw("Starting Server on", "listenAddr", l.Addr())
 
 	newConnections := make(chan net.Conn)
 
-	go listener(ctx, listenAddr, newConnections)
+	go listener(ctx, l, newConnections)
 
 	for {
 		select {
@@ -55,13 +55,8 @@ func (s *Server) AddHandler(method, path string, requestHandler RequestHandler) 
 	s.handlers[ident] = requestHandler
 }
 
-func listener(ctx context.Context, listenAddr string, connChan chan<- net.Conn) {
+func listener(ctx context.Context, listener net.Listener, connChan chan<- net.Conn) {
 	logger := log.FromContext(ctx)
-	listener, err := net.Listen("tcp", listenAddr)
-	if err != nil {
-		logger.Errorw("Error creating listener", "error", err)
-		return
-	}
 
 	for ctx.Err() == nil {
 		conn, err := listener.Accept()
@@ -72,6 +67,8 @@ func listener(ctx context.Context, listenAddr string, connChan chan<- net.Conn) 
 
 		connChan <- conn
 	}
+
+	close(connChan)
 }
 
 func (s *Server) handleNewConnection(ctx context.Context, rd io.ReadWriteCloser) {
