@@ -77,17 +77,15 @@ func TestServer(t *testing.T) {
 
 	// wait indefinetly to make sure listener does not spin cpu
 	f.listenerMock.EXPECT().Accept().DoAndReturn(func() (net.Conn, error) {
-		select {
-		case <-f.ctx.Done():
-			return nil, fmt.Errorf("some error")
-		}
+		<-f.ctx.Done()
+		return nil, fmt.Errorf("some error")
 	})
 
 	requestInput := "POST / HTTP/1.1\r\n Host: localhost:4221\r\n User-Agent: curl/8.4.0\r\n Accept: */*\r\nContent-Length: 16\r\n Content-Type: application/json\r\n\r\n{\"test\":\"value\"}"
 
 	go f.sut.Run(f.ctx, f.listenerMock)
 
-	f.clientConn.Write([]byte(requestInput))
+	_, _ = f.clientConn.Write([]byte(requestInput))
 
 	data, err := getData(f.clientConn)
 	assert.Nil(t, err)
