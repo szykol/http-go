@@ -23,7 +23,7 @@ type serverTestF struct {
 func noOpHandler(ResponseWriter, *Request) {}
 
 func setupServerTest(t *testing.T) serverTestF {
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second*30)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Millisecond*30)
 	logger := log.NewLogger(log.NewZapCfg())
 	ctx = log.WithContext(ctx, logger)
 	ctrl := gomock.NewController(t)
